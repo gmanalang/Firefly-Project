@@ -11,7 +11,7 @@ import {
 import { storage } from "./firebase/firebase.js";
 
 function App() {
-  const [currentSession, setCurrentSession] = useState(-1);
+  const [currentSession, setCurrentSession] = useState();
   const [imageUpload, setImageHolder] = useState(null);
   const [imageList, setImageList] = useState([]);
   const imageListRef = ref(storage, `sessions/${currentSession}`);
@@ -86,45 +86,16 @@ function App() {
         response.items.forEach((item) => {
           deleteObject(item)
             .then(() => {
-              console.log("Files deleted successfully");
             })
             .catch((error) => {
-              console.log("Error deleting file:", error);
             });
         });
       })
       .catch((error) => {
-        console.log("Error listing files:", error);
       });
     setImageList([]);
     refreshFiles();
   };
-
-  /** */
-  // const deleteSingleHandler = (url) => {
-  //   listAll(imageListRef)
-  //     .then((response) => {
-  //       response.items.forEach((item) => {
-  //         getDownloadURL(item).then((itemUrl) => {
-  //           if (itemUrl === url) {
-  //             deleteObject(item)
-  //               .then(() => {
-  //                 setImageList((prev) => [
-  //                   ...prev.filter((i) => i !== itemUrl),
-  //                 ]);
-  //                 console.log("File deleted successfully");
-  //               })
-  //               .catch((error) => {
-  //                 console.log("Error deleting file:", error);
-  //               });
-  //           }
-  //         });
-  //       });
-  //     })
-  //     .catch((error) => {
-  //       console.log("Error listing files:", error);
-  //     });
-  // };
 
   const deleteSingleHandler = async (url) => {
     try {
@@ -139,9 +110,7 @@ function App() {
             setImageList((prev) => [
               ...prev.filter((i) => i !== itemUrl),
             ]);
-            console.log("File deleted successfully");
           } catch (error) {
-            console.log("Error deleting file:", error);
           }
         }
       });
@@ -150,7 +119,6 @@ function App() {
       await Promise.all(itemPromises);
   
     } catch (error) {
-      console.log("Error listing files:", error);
     }
   };
   
@@ -164,10 +132,8 @@ function App() {
 
     if (check) {
       setCurrentSession(pin);
-      console.log("Password Accepted");
       return true;
     } else {
-      console.log("Password Failed");
       return false;
     }
   };
@@ -178,7 +144,6 @@ function App() {
     let responses = await listAll(sessionListRef)
       .then((response) => response)
       .catch((error) => {
-        console.log("No current session:", error);
         return false;
       });
 
@@ -200,7 +165,6 @@ function App() {
     }
 
     setCurrentSession(randSession);
-    console.log(randSession);
   };
 
   const fetchUrls = async (item) => {
@@ -229,9 +193,7 @@ function App() {
     };
   }, [activeIndex]);
 
-  ////////////////////////////
-  // END APP SWITCHER
-  ////////////////////////////
+
 
   return (
     <>
@@ -241,6 +203,7 @@ function App() {
             onAction={() => setActiveIndex(1)}
             generateSessionHandler={generateSessionHandler}
             passwordHandler={passwordHandler}
+            refreshFiles={refreshFiles}
           />
         </div>
       </Panel>
@@ -248,6 +211,7 @@ function App() {
       <Panel isActive={activeIndex === 1}>
         <div className="panel1">
           <UploadDownload
+            onAction={() => setActiveIndex(0)}
             currentSession={currentSession}
             setImageHolder={setImageHolder}
             uploadImageHandler={uploadImageHandler}
@@ -266,6 +230,10 @@ function App() {
       </Panel>
     </>
   );
+
+  ////////////////////////////
+  // END APP SWITCHER
+  ////////////////////////////
 }
 
 function Panel({ children, isActive }) {
@@ -274,7 +242,7 @@ function Panel({ children, isActive }) {
   );
 }
 
-export function Landing({ onAction, generateSessionHandler, passwordHandler }) {
+export function Landing({ onAction, generateSessionHandler, passwordHandler, refreshFiles }) {
   const [AuthPin, setAuthPin] = useState("");
 
   const handleAuth = (v) => {
@@ -283,19 +251,18 @@ export function Landing({ onAction, generateSessionHandler, passwordHandler }) {
     }
   };
 
-  const [, setUpload] = useState(false);
-  const [, setCodesubmit] = useState(false);
-
   function generateCode() {
-    setUpload(true);
     onAction();
     generateSessionHandler();
   }
 
-  function handleSubmitCode() {
-    if (passwordHandler(AuthPin)) {
-      setCodesubmit(true);
+  async function handleSubmitCode() {
+    if (await passwordHandler(AuthPin)) {
+      refreshFiles();
       onAction();
+    }
+    else{
+      alert("Incorrect Pin")
     }
   }
 
@@ -307,7 +274,7 @@ export function Landing({ onAction, generateSessionHandler, passwordHandler }) {
         <div>
           {
             <button className="button-24" onClick={generateCode}>
-              Generate Code
+              New Session
             </button>
           }
         </div>
@@ -339,6 +306,7 @@ export function Landing({ onAction, generateSessionHandler, passwordHandler }) {
 }
 
 export function UploadDownload({
+  onAction,
   currentSession,
   setImageHolder,
   uploadImageHandler,
@@ -404,8 +372,9 @@ export function UploadDownload({
               className="button-25"
               onClick={uploadImageHandler}
             >
-              Send Files
+              Send File
             </button>
+  
             <br></br>
             <br></br>
             <button
@@ -428,7 +397,10 @@ export function UploadDownload({
         <br></br>
         <div className="showcode-2">
           <p>time left</p>
-          <Timer />
+          <Timer 
+            deleteImageHandler={deleteImageHandler}
+            onAction={onAction}
+          />
         </div>
       </div>
     </div>
@@ -445,7 +417,6 @@ export function Table({
   refresh,
   refreshFiles
 }) {
-  // eslint-disable-next-line
   const [files, setFiles] = useState([]);
 
   const downloadFile = (url, name) => {
@@ -488,16 +459,6 @@ export function Table({
   }
   
 
-  // useEffect(() => {
-  //   setImageList([]);
-  //   listAll(imageListRef).then((response) => {
-  //     response.items.forEach((item) => {
-  //       setImageList((prev) => [...prev, item]);
-  //     });
-  //   });
-  //   fileList();
-  // }, [currentSession]);
-
 
 useEffect(() => {
   setImageList([]);
@@ -509,6 +470,7 @@ useEffect(() => {
       });
       // fileList();
   });
+  // eslint-disable-next-line
 }, [currentSession, refresh]);
 
   return (
@@ -550,7 +512,7 @@ useEffect(() => {
   );
 }
 
-export function Timer() {
+export function Timer({deleteImageHandler, onAction}) {
   // We need ref in this, because we are dealing
   // with JS setInterval to keep track of it and
   // stop it when needed
@@ -586,6 +548,14 @@ export function Timer() {
           ":" +
           (seconds > 9 ? seconds : "0" + seconds)
       );
+    } else {
+      // When the timer reaches zero, call the deleteImageHandler
+      deleteImageHandler();
+      onAction();
+      alert("Time's up!")
+  
+      // Clear the interval to stop the timer
+      if (Ref.current) clearInterval(Ref.current);
     }
   };
 
