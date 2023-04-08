@@ -1,6 +1,5 @@
 import "./App.css";
 import React, { useState, useRef, useEffect } from "react";
-import { eventWrapper } from "@testing-library/user-event/dist/utils";
 import {
   getDownloadURL,
   listAll,
@@ -9,8 +8,6 @@ import {
   deleteObject,
   getStorage
 } from "firebase/storage";
-import { v4 } from "uuid";
-import axios from "axios";
 import { storage } from "./firebase/firebase.js";
 
 function App() {
@@ -19,8 +16,15 @@ function App() {
   const [imageList, setImageList] = useState([]);
   const imageListRef = ref(storage, `sessions/${currentSession}`);
   const sessionListRef = ref(storage, "sessions/");
-  const [imageRef, setImageRef] = useState("");
-  const [imageUrls, setImageUrls] = useState([]);
+  const [, setImageRef] = useState("");
+  const [, setImageUrls] = useState([]);
+
+
+  const [refresh, setRefresh] = useState(false);
+
+  function refreshFiles() {
+    setRefresh(!refresh);
+  }
 
   /**
    *
@@ -45,6 +49,8 @@ function App() {
       //   setImageList((prev) => [...prev, url]);
       // });
     });
+
+    refreshFiles();
   };
 
   /**
@@ -91,6 +97,7 @@ function App() {
         console.log("Error listing files:", error);
       });
     setImageList([]);
+    refreshFiles();
   };
 
   /** */
@@ -172,16 +179,7 @@ function App() {
     setImageUrls((prev) => [...prev, url]);
   };
 
-  useEffect(() => {
-    setImageList([]);
-    setImageUrls([]);
-    listAll(imageListRef).then((response) => {
-      response.items.forEach((item) => {
-        setImageList((prev) => [...prev, item]);
-        fetchUrls(item);
-      });
-    });
-  }, [currentSession]);
+
 
   ////////////////////////////
   // APP SWITCHER
@@ -232,6 +230,8 @@ function App() {
             imageList={imageList}
             downloadImageHandler={downloadImageHandler}
             deleteSingleHandler={deleteSingleHandler}
+            refresh={refresh}
+            refreshFiles={refreshFiles}
           />
         </div>
       </Panel>
@@ -320,29 +320,16 @@ export function UploadDownload({
   fetchUrls,
   imageList,
   downloadImageHandler,
-  deleteSingleHandler
+  deleteSingleHandler,
+  refresh,
+  refreshFiles,
 }) {
-  const [file, setFile] = useState();
-
-  function handleSubmit(event) {
-    event.preventDefault();
-    const url = "http://localhost:3000/uploadFile";
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("fileName", file.name);
-    const config = {
-      headers: {
-        "content-type": "multipart/form-data",
-      },
-    };
-    axios.post(url, formData, config).then((response) => {
-      console.log(response.data);
-    });
-  }
 
   function triggerFileInputClick() {
     document.getElementById("hiddenFileInput").click();
   }
+
+
 
   return (
     <div>
@@ -355,6 +342,8 @@ export function UploadDownload({
         imageList={imageList}
         deleteSingleHandler={deleteSingleHandler}
         downloadImageHandler={downloadImageHandler}
+        refresh={refresh}
+        refreshFiles={refreshFiles}
       />
       <div className="sidebar">
         <h1 className="font-link-2">Firefly</h1>
@@ -397,6 +386,14 @@ export function UploadDownload({
             >
               Delete All
             </button>
+            <br></br>
+            <button
+              type="button"
+              className="button-26"
+              onClick={refreshFiles}
+            >
+              Refresh
+            </button>
           </form>
         }
         <br></br>
@@ -412,21 +409,25 @@ export function UploadDownload({
 
 export function Table({
   setImageList,
-  setImageUrls,
   imageListRef,
-  fetchUrls,
   currentSession,
-  imageList,
   deleteSingleHandler,
   downloadImageHandler,
+  refresh,
+  refreshFiles
 }) {
   // eslint-disable-next-line
   const [files, setFiles] = useState([]);
 
   const downloadFile = (url, name) => {
-    alert(`Downloading ${name}`);
     downloadImageHandler(url, name);
   };
+
+  const deleteFile = async (name) => {
+    await deleteSingleHandler(name);
+    refreshFiles();
+  };
+
 
   // async function fileList() {
   //   let objectList = await imageList.map((item) => (getObjectInfo(item)));
@@ -478,7 +479,7 @@ useEffect(() => {
       });
       // fileList();
   });
-}, [currentSession]);
+}, [currentSession, refresh]);
 
   return (
     <div className="App">
@@ -506,7 +507,7 @@ useEffect(() => {
               <td>
                 <button
                   className="button-25"
-                  onClick={() => deleteSingleHandler(file.url)}
+                  onClick={() => deleteFile(file.url)}
                 >
                   Delete
                 </button>
