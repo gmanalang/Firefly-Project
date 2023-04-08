@@ -230,6 +230,8 @@ function App() {
             imageListRef={imageListRef}
             fetchUrls={fetchUrls}
             imageList={imageList}
+            downloadImageHandler={downloadImageHandler}
+            deleteSingleHandler={deleteSingleHandler}
           />
         </div>
       </Panel>
@@ -317,6 +319,8 @@ export function UploadDownload({
   imageListRef,
   fetchUrls,
   imageList,
+  downloadImageHandler,
+  deleteSingleHandler
 }) {
   const [file, setFile] = useState();
 
@@ -349,6 +353,8 @@ export function UploadDownload({
         fetchUrls={fetchUrls}
         currentSession={currentSession}
         imageList={imageList}
+        deleteSingleHandler={deleteSingleHandler}
+        downloadImageHandler={downloadImageHandler}
       />
       <div className="sidebar">
         <h1 className="font-link-2">Firefly</h1>
@@ -411,44 +417,35 @@ export function Table({
   fetchUrls,
   currentSession,
   imageList,
+  deleteSingleHandler,
+  downloadImageHandler,
 }) {
   // eslint-disable-next-line
-  const [files, setFiles] = useState([
-    { id: 1, name: "file1.txt" },
-    { id: 2, name: "file2.pdf" },
-    { id: 3, name: "file3.jpg" },
-    { id: 4, name: "file3.jpg" },
-  ]);
+  const [files, setFiles] = useState([]);
 
-  const downloadFile = (file) => {
-    // Add your file download logic here.
-    // For instance, you can use fetch() to download the file from your server
-    // and then create a Blob with the response data, followed by creating
-    // an anchor element with the 'download' attribute and trigger a click event.
-    alert(`Downloading ${file.name}`);
+  const downloadFile = (url, name) => {
+    alert(`Downloading ${name}`);
+    downloadImageHandler(url, name);
   };
 
-  async function fileList() {
-    const listOThings = await imageList.map((imageList) => (getObjectInfo(imageList)));
-    console.log(listOThings);
-  }
-
-  
-
-
-  // function getObjectName(object) {
-  //   if (object && object._location && object._location.path_) {
-  //       const path = object._location.path_;
-  //       const name = path.split('/').pop();
-  //       return name;
-  //   }
-  //   return null;
+  // async function fileList() {
+  //   let objectList = await imageList.map((item) => (getObjectInfo(item)));
+  //   objectList = await Promise.all(objectList);
+  //   objectList = objectList.slice(0, objectList.length/2);
+  //   setFiles(objectList);
   // }
+
+  async function fileList(item) {
+    // let objectList = await Promise.all(imageList.map((item) => getObjectInfo(item)));
+    let obj = await getObjectInfo(item);
+    // objectList = objectList.slice(0, objectList.length / 2);
+    setFiles(prev => [...prev, obj]);
+}
 
   async function getObjectInfo(object) {
     const storage = getStorage(object._service.app);
     const path = object._location.path_;
-    const id = path.split('/')[1];
+    const id = Math.floor(Math.random() * 100);
     const name = path.split('/').pop();
     const storageRef = ref(storage, path);
     const url = await getDownloadURL(storageRef);
@@ -461,16 +458,27 @@ export function Table({
   }
   
 
-  useEffect(() => {
-    setImageList([]);
-    setImageUrls([]);
-    listAll(imageListRef).then((response) => {
+  // useEffect(() => {
+  //   setImageList([]);
+  //   listAll(imageListRef).then((response) => {
+  //     response.items.forEach((item) => {
+  //       setImageList((prev) => [...prev, item]);
+  //     });
+  //   });
+  //   fileList();
+  // }, [currentSession]);
+
+
+useEffect(() => {
+  setImageList([]);
+  listAll(imageListRef).then((response) => {
       response.items.forEach((item) => {
-        setImageList((prev) => [...prev, item]);
-        fetchUrls(item);
+          setImageList((prev) => [...prev, item]);
+          fileList(item);
       });
-    });
-  }, [currentSession]);
+      // fileList();
+  });
+}, [currentSession]);
 
   return (
     <div className="App">
@@ -490,7 +498,7 @@ export function Table({
               <td>
                 <button
                   className="button-25"
-                  onClick={() => downloadFile(file)}
+                  onClick={() => downloadFile(file.url, file.name)}
                 >
                   Download
                 </button>
@@ -498,14 +506,13 @@ export function Table({
               <td>
                 <button
                   className="button-25"
-                  onClick={() => downloadFile(file)}
+                  onClick={() => deleteSingleHandler(file.url)}
                 >
                   Delete
                 </button>
               </td>
             </tr>
           ))}
-          <button onClick = {fileList}>Click</button>
         </tbody>
       </table>
     </div>
