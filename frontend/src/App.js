@@ -7,6 +7,7 @@ import {
   ref,
   uploadBytes,
   deleteObject,
+  getStorage
 } from "firebase/storage";
 import { v4 } from "uuid";
 import axios from "axios";
@@ -50,7 +51,7 @@ function App() {
    *
    * @param {*} url
    */
-  const downloadImageHandler = (url) => {
+  const downloadImageHandler = (url, name) => {
     const xhr = new XMLHttpRequest();
     xhr.responseType = "blob";
     xhr.onload = (event) => {
@@ -58,7 +59,7 @@ function App() {
       const a = document.createElement("a");
       const urlObject = window.URL.createObjectURL(blob);
       a.href = urlObject;
-      a.download = "image.jpg"; // the file name
+      a.download = name; // the file name
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
@@ -402,6 +403,7 @@ export function UploadDownload({
   );
 }
 
+
 export function Table({
   setImageList,
   setImageUrls,
@@ -426,14 +428,38 @@ export function Table({
     alert(`Downloading ${file.name}`);
   };
 
-  function getObjectName(object) {
-    if (object && object._location && object._location.path_) {
-        const path = object._location.path_;
-        const name = path.split('/').pop();
-        return name;
-    }
-    return null;
+  async function fileList() {
+    const listOThings = await imageList.map((imageList) => (getObjectInfo(imageList)));
+    console.log(listOThings);
   }
+
+  
+
+
+  // function getObjectName(object) {
+  //   if (object && object._location && object._location.path_) {
+  //       const path = object._location.path_;
+  //       const name = path.split('/').pop();
+  //       return name;
+  //   }
+  //   return null;
+  // }
+
+  async function getObjectInfo(object) {
+    const storage = getStorage(object._service.app);
+    const path = object._location.path_;
+    const id = path.split('/')[1];
+    const name = path.split('/').pop();
+    const storageRef = ref(storage, path);
+    const url = await getDownloadURL(storageRef);
+
+    return {
+        id,
+        name,
+        url
+    };
+  }
+  
 
   useEffect(() => {
     setImageList([]);
@@ -479,6 +505,7 @@ export function Table({
               </td>
             </tr>
           ))}
+          <button onClick = {fileList}>Click</button>
         </tbody>
       </table>
     </div>
