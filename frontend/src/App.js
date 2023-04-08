@@ -423,8 +423,8 @@ export function Table({
     downloadImageHandler(url, name);
   };
 
-  const deleteFile = async (name) => {
-    await deleteSingleHandler(name);
+  const deleteFile = async (url) => {
+    await deleteSingleHandler(url);
     refreshFiles();
   };
 
@@ -472,6 +472,7 @@ export function Table({
 
 useEffect(() => {
   setImageList([]);
+  setFiles([]);
   listAll(imageListRef).then((response) => {
       response.items.forEach((item) => {
           setImageList((prev) => [...prev, item]);
