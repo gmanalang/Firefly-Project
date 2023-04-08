@@ -452,8 +452,8 @@ export function Table({
     downloadImageHandler(url, name);
   };
 
-  const deleteFile = async (name) => {
-    await deleteSingleHandler(name);
+  const deleteFile = async (url) => {
+    await deleteSingleHandler(url);
     refreshFiles();
   };
 
