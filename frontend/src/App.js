@@ -101,30 +101,59 @@ function App() {
   };
 
   /** */
-  const deleteSingleHandler = (url) => {
-    listAll(imageListRef)
-      .then((response) => {
-        response.items.forEach((item) => {
-          getDownloadURL(item).then((itemUrl) => {
-            if (itemUrl === url) {
-              deleteObject(item)
-                .then(() => {
-                  setImageList((prev) => [
-                    ...prev.filter((i) => i !== itemUrl),
-                  ]);
-                  console.log("File deleted successfully");
-                })
-                .catch((error) => {
-                  console.log("Error deleting file:", error);
-                });
-            }
-          });
-        });
-      })
-      .catch((error) => {
-        console.log("Error listing files:", error);
+  // const deleteSingleHandler = (url) => {
+  //   listAll(imageListRef)
+  //     .then((response) => {
+  //       response.items.forEach((item) => {
+  //         getDownloadURL(item).then((itemUrl) => {
+  //           if (itemUrl === url) {
+  //             deleteObject(item)
+  //               .then(() => {
+  //                 setImageList((prev) => [
+  //                   ...prev.filter((i) => i !== itemUrl),
+  //                 ]);
+  //                 console.log("File deleted successfully");
+  //               })
+  //               .catch((error) => {
+  //                 console.log("Error deleting file:", error);
+  //               });
+  //           }
+  //         });
+  //       });
+  //     })
+  //     .catch((error) => {
+  //       console.log("Error listing files:", error);
+  //     });
+  // };
+
+  const deleteSingleHandler = async (url) => {
+    try {
+      const response = await listAll(imageListRef);
+      
+      const itemPromises = response.items.map(async (item) => {
+        const itemUrl = await getDownloadURL(item);
+  
+        if (itemUrl === url) {
+          try {
+            await deleteObject(item);
+            setImageList((prev) => [
+              ...prev.filter((i) => i !== itemUrl),
+            ]);
+            console.log("File deleted successfully");
+          } catch (error) {
+            console.log("Error deleting file:", error);
+          }
+        }
       });
+  
+      // Wait for all itemPromises to complete before resolving
+      await Promise.all(itemPromises);
+  
+    } catch (error) {
+      console.log("Error listing files:", error);
+    }
   };
+  
 
   /*
    * Checks the password against the files in database
@@ -472,6 +501,7 @@ export function Table({
 
 useEffect(() => {
   setImageList([]);
+  setFiles([]);
   listAll(imageListRef).then((response) => {
       response.items.forEach((item) => {
           setImageList((prev) => [...prev, item]);
