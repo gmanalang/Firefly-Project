@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/Oasis-firefly/static/css/main.d00c91e8.css",
-    "main.js": "/Oasis-firefly/static/js/main.3535bd41.js",
+    "main.js": "/Oasis-firefly/static/js/main.da15d68e.js",
     "static/js/787.39bb0775.chunk.js": "/Oasis-firefly/static/js/787.39bb0775.chunk.js",
     "index.html": "/Oasis-firefly/index.html",
     "main.d00c91e8.css.map": "/Oasis-firefly/static/css/main.d00c91e8.css.map",
-    "main.3535bd41.js.map": "/Oasis-firefly/static/js/main.3535bd41.js.map",
+    "main.da15d68e.js.map": "/Oasis-firefly/static/js/main.da15d68e.js.map",
     "787.39bb0775.chunk.js.map": "/Oasis-firefly/static/js/787.39bb0775.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.d00c91e8.css",
-    "static/js/main.3535bd41.js"
+    "static/js/main.da15d68e.js"
   ]
 }
