@@ -6,7 +6,7 @@ import {
   ref,
   uploadBytes,
   deleteObject,
-  getStorage
+  getStorage,
 } from "firebase/storage";
 import { storage } from "./firebase/firebase.js";
 
@@ -16,9 +16,9 @@ function App() {
   const [imageList, setImageList] = useState([]);
   const imageListRef = ref(storage, `sessions/${currentSession}`);
   const sessionListRef = ref(storage, "sessions/");
+  const [files, setFiles] = useState([]);
   const [, setImageRef] = useState("");
   const [, setImageUrls] = useState([]);
-
 
   const [refresh, setRefresh] = useState(false);
 
@@ -26,11 +26,49 @@ function App() {
     await setRefresh(!refresh);
   }
 
+  async function getObjectInfo(object) {
+    const storage = getStorage(object._service.app);
+    const path = object._location.path_;
+    const id = Math.floor(Math.random() * 100);
+    const name = path.split("/").pop();
+    const storageRef = ref(storage, path);
+    const url = await getDownloadURL(storageRef);
+
+    return {
+      id,
+      name,
+      url,
+    };
+  }
+
   /**
    *
    * @returns {boolean} true if password is correct, false otherwise
    */
-  const uploadImageHandler = () => {
+  // const uploadImageHandler = async () => {
+  //   if (imageUpload == null) {
+  //     return;
+  //   }
+
+  //   let currentImageRef = ref(
+  //     storage,
+  //     `sessions/${currentSession}/${imageUpload.name}`
+  //   );
+
+  //   setImageRef(currentImageRef);
+
+  //   uploadBytes(currentImageRef, imageUpload).then((snapshot) => {
+  //     setImageList((prev) => [...prev, snapshot.ref]);
+  //   });
+
+  //   await refreshFiles();
+  // };
+
+  /**
+   *
+   * @returns {boolean} true if password is correct, false otherwise
+   */
+  const uploadImageHandler = async () => {
     if (imageUpload == null) {
       return;
     }
@@ -42,15 +80,15 @@ function App() {
 
     setImageRef(currentImageRef);
 
-    uploadBytes(currentImageRef, imageUpload).then((snapshot) => {
-      setImageList((prev) => [...prev, snapshot.ref]);
+    const snapshot = await uploadBytes(currentImageRef, imageUpload);
 
-      // getDownloadURL(snapshot.ref).then((url) => {
-      //   setImageList((prev) => [...prev, url]);
-      // });
-    });
+    // Get the file information for the uploaded image
+    const uploadedFileInfo = await getObjectInfo(snapshot.ref);
 
-    refreshFiles();
+    // Update the files state with the uploaded file information
+    setFiles((prev) => [...prev, uploadedFileInfo]);
+
+    await refreshFiles();
   };
 
   /**
@@ -80,48 +118,38 @@ function App() {
    *  Gets the list of images from the database and sets the imageList state
    *
    */
-  const deleteImageHandler = () => {
-    listAll(imageListRef)
-      .then((response) => {
-        response.items.forEach((item) => {
-          deleteObject(item)
-            .then(() => {
-            })
-            .catch((error) => {
-            });
-        });
-      })
-      .catch((error) => {
-      });
-    setImageList([]);
-    refreshFiles();
+  const deleteImageHandler = async () => {
+    try {
+      const response = await listAll(imageListRef);
+      const deletePromises = response.items.map((item) => deleteObject(item));
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error("Error deleting images:", error);
+    }
+
+    setFiles([]);
+    await refreshFiles();
   };
 
   const deleteSingleHandler = async (url) => {
     try {
       const response = await listAll(imageListRef);
-      
+
       const itemPromises = response.items.map(async (item) => {
         const itemUrl = await getDownloadURL(item);
-  
+
         if (itemUrl === url) {
           try {
             await deleteObject(item);
-            setImageList((prev) => [
-              ...prev.filter((i) => i !== itemUrl),
-            ]);
-          } catch (error) {
-          }
+            setImageList((prev) => [...prev.filter((i) => i !== itemUrl)]);
+          } catch (error) {}
         }
       });
-  
+
       // Wait for all itemPromises to complete before resolving
       await Promise.all(itemPromises);
-  
-    } catch (error) {
-    }
+    } catch (error) {}
   };
-  
 
   /*
    * Checks the password against the files in database
@@ -172,8 +200,6 @@ function App() {
     setImageUrls((prev) => [...prev, url]);
   };
 
-
-
   ////////////////////////////
   // APP SWITCHER
   ////////////////////////////
@@ -192,8 +218,6 @@ function App() {
       document.body.className = "";
     };
   }, [activeIndex]);
-
-
 
   return (
     <>
@@ -225,6 +249,9 @@ function App() {
             deleteSingleHandler={deleteSingleHandler}
             refresh={refresh}
             refreshFiles={refreshFiles}
+            setFiles={setFiles}
+            getObjectInfo={getObjectInfo}
+            files={files}
           />
         </div>
       </Panel>
@@ -242,7 +269,12 @@ function Panel({ children, isActive }) {
   );
 }
 
-export function Landing({ onAction, generateSessionHandler, passwordHandler, refreshFiles }) {
+export function Landing({
+  onAction,
+  generateSessionHandler,
+  passwordHandler,
+  refreshFiles,
+}) {
   const [AuthPin, setAuthPin] = useState("");
 
   const handleAuth = (v) => {
@@ -260,9 +292,8 @@ export function Landing({ onAction, generateSessionHandler, passwordHandler, ref
     if (await passwordHandler(AuthPin)) {
       await refreshFiles();
       onAction();
-    }
-    else{
-      alert("Incorrect Pin")
+    } else {
+      alert("Incorrect Pin");
     }
   }
 
@@ -320,13 +351,13 @@ export function UploadDownload({
   deleteSingleHandler,
   refresh,
   refreshFiles,
+  getObjectInfo,
+  setFiles,
+  files,
 }) {
-
   function triggerFileInputClick() {
     document.getElementById("hiddenFileInput").click();
   }
-
-
 
   return (
     <div>
@@ -341,6 +372,9 @@ export function UploadDownload({
         downloadImageHandler={downloadImageHandler}
         refresh={refresh}
         refreshFiles={refreshFiles}
+        getObjectInfo={getObjectInfo}
+        setFiles={setFiles}
+        files={files}
       />
       <div className="sidebar">
         <h1 className="font-link-2">Firefly</h1>
@@ -374,7 +408,7 @@ export function UploadDownload({
             >
               Send File
             </button>
-  
+
             <br></br>
             <br></br>
             <button
@@ -385,11 +419,7 @@ export function UploadDownload({
               Delete All
             </button>
             <br></br>
-            <button
-              type="button"
-              className="button-26"
-              onClick={refreshFiles}
-            >
+            <button type="button" className="button-26" onClick={refreshFiles}>
               Refresh
             </button>
           </form>
@@ -397,16 +427,12 @@ export function UploadDownload({
         <br></br>
         <div className="showcode-2">
           <p>time left</p>
-          <Timer 
-            deleteImageHandler={deleteImageHandler}
-            onAction={onAction}
-          />
+          <Timer deleteImageHandler={deleteImageHandler} onAction={onAction} />
         </div>
       </div>
     </div>
   );
 }
-
 
 export function Table({
   setImageList,
@@ -415,10 +441,11 @@ export function Table({
   deleteSingleHandler,
   downloadImageHandler,
   refresh,
-  refreshFiles
+  refreshFiles,
+  getObjectInfo,
+  setFiles,
+  files,
 }) {
-  const [files, setFiles] = useState([]);
-
   const downloadFile = (url, name) => {
     downloadImageHandler(url, name);
   };
@@ -428,28 +455,12 @@ export function Table({
     refreshFiles();
   };
 
-
-  async function fileList(item) {
-    // let objectList = await Promise.all(imageList.map((item) => getObjectInfo(item)));
-    let obj = await getObjectInfo(item);
-    // objectList = objectList.slice(0, objectList.length / 2);
-    setFiles(prev => [...prev, obj]);
-}
-
-  async function getObjectInfo(object) {
-    const storage = getStorage(object._service.app);
-    const path = object._location.path_;
-    const id = Math.floor(Math.random() * 100);
-    const name = path.split('/').pop();
-    const storageRef = ref(storage, path);
-    const url = await getDownloadURL(storageRef);
-
-    return {
-        id,
-        name,
-        url
-    };
-  }
+  //   async function fileList(item) {
+  //     // let objectList = await Promise.all(imageList.map((item) => getObjectInfo(item)));
+  //     let obj = await getObjectInfo(item);
+  //     // objectList = objectList.slice(0, objectList.length / 2);
+  //     setFiles(prev => [...prev, obj]);
+  // }
 
   const fetchFiles = async () => {
     try {
@@ -462,10 +473,10 @@ export function Table({
       const fetchedFiles = await Promise.all(filePromises);
       setFiles(fetchedFiles);
     } catch (error) {
-      console.log('Error fetching files:', error);
+      console.log("Error fetching files:", error);
     }
   };
-  
+
   useEffect(() => {
     setFiles([]);
     fetchFiles();
@@ -511,7 +522,7 @@ export function Table({
   );
 }
 
-export function Timer({deleteImageHandler, onAction}) {
+export function Timer({ deleteImageHandler, onAction }) {
   // We need ref in this, because we are dealing
   // with JS setInterval to keep track of it and
   // stop it when needed
@@ -551,8 +562,8 @@ export function Timer({deleteImageHandler, onAction}) {
       // When the timer reaches zero, call the deleteImageHandler
       deleteImageHandler();
       onAction();
-      alert("Time's up!")
-  
+      alert("Time's up!");
+
       // Clear the interval to stop the timer
       if (Ref.current) clearInterval(Ref.current);
     }
