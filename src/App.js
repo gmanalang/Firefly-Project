@@ -22,8 +22,8 @@ function App() {
 
   const [refresh, setRefresh] = useState(false);
 
-  function refreshFiles() {
-    setRefresh(!refresh);
+  async function refreshFiles() {
+    await setRefresh(!refresh);
   }
 
   /**
@@ -258,7 +258,7 @@ export function Landing({ onAction, generateSessionHandler, passwordHandler, ref
 
   async function handleSubmitCode() {
     if (await passwordHandler(AuthPin)) {
-      refreshFiles();
+      await refreshFiles();
       onAction();
     }
     else{
@@ -429,13 +429,6 @@ export function Table({
   };
 
 
-  // async function fileList() {
-  //   let objectList = await imageList.map((item) => (getObjectInfo(item)));
-  //   objectList = await Promise.all(objectList);
-  //   objectList = objectList.slice(0, objectList.length/2);
-  //   setFiles(objectList);
-  // }
-
   async function fileList(item) {
     // let objectList = await Promise.all(imageList.map((item) => getObjectInfo(item)));
     let obj = await getObjectInfo(item);
@@ -457,21 +450,27 @@ export function Table({
         url
     };
   }
-  
 
-
-useEffect(() => {
-  setImageList([]);
-  setFiles([]);
-  listAll(imageListRef).then((response) => {
-      response.items.forEach((item) => {
-          setImageList((prev) => [...prev, item]);
-          fileList(item);
+  const fetchFiles = async () => {
+    try {
+      const response = await listAll(imageListRef);
+      const filePromises = response.items.map(async (item) => {
+        const fileInfo = await getObjectInfo(item);
+        return fileInfo;
       });
-      // fileList();
-  });
-  // eslint-disable-next-line
-}, [currentSession, refresh]);
+
+      const fetchedFiles = await Promise.all(filePromises);
+      setFiles(fetchedFiles);
+    } catch (error) {
+      console.log('Error fetching files:', error);
+    }
+  };
+  
+  useEffect(() => {
+    setFiles([]);
+    fetchFiles();
+    // eslint-disable-next-line
+  }, [currentSession, refresh]);
 
   return (
     <div className="App">
