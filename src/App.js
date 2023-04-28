@@ -41,28 +41,6 @@ function App() {
     };
   }
 
-  /**
-   *
-   * @returns {boolean} true if password is correct, false otherwise
-   */
-  // const uploadImageHandler = async () => {
-  //   if (imageUpload == null) {
-  //     return;
-  //   }
-
-  //   let currentImageRef = ref(
-  //     storage,
-  //     `sessions/${currentSession}/${imageUpload.name}`
-  //   );
-
-  //   setImageRef(currentImageRef);
-
-  //   uploadBytes(currentImageRef, imageUpload).then((snapshot) => {
-  //     setImageList((prev) => [...prev, snapshot.ref]);
-  //   });
-
-  //   await refreshFiles();
-  // };
 
   /**
    *
@@ -134,10 +112,8 @@ function App() {
   const deleteSingleHandler = async (url) => {
     try {
       const response = await listAll(imageListRef);
-
       const itemPromises = response.items.map(async (item) => {
         const itemUrl = await getDownloadURL(item);
-
         if (itemUrl === url) {
           try {
             await deleteObject(item);
@@ -454,13 +430,6 @@ export function Table({
     await deleteSingleHandler(url);
     refreshFiles();
   };
-
-  //   async function fileList(item) {
-  //     // let objectList = await Promise.all(imageList.map((item) => getObjectInfo(item)));
-  //     let obj = await getObjectInfo(item);
-  //     // objectList = objectList.slice(0, objectList.length / 2);
-  //     setFiles(prev => [...prev, obj]);
-  // }
 
   const fetchFiles = async () => {
     try {
