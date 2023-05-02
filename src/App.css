@@ -62,7 +62,7 @@ body, h1 {
 }
  
   
-  /* Style the custom upload button */
+  /* Style the custom upload button - THIS IS UNUSED*/
   .custom-upload-btn {
     background-color: #FFFFFF;
     border: 1px solid #222222;
@@ -256,24 +256,28 @@ body, h1 {
     height: 100vh;
 }
 
+/* THIS IS UNUSED*/
 .left-half {
     width: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
-
+/*THIS IS UNUSED */
 .logo {
     margin: 20px 0;
     font-size: 36px;
     font-weight: bold;
 }
 
+/* THIS IS UNUSED*/ 
 .file-list {
     list-style-type: none;
     padding: 0;
     margin: 0;
 }
+
+/* THIS IS UNUSED*/ 
 
 .file-list li {
     padding: 10px;
@@ -281,10 +285,13 @@ body, h1 {
     cursor: pointer;
 }
 
+/* THIS IS UNUSED*/ 
+
 .file-list li:hover {
     background-color: #f0f0f0;
 }
 
+/* THIS IS UNUSED*/ 
 .right-half {
     width: 50%;
     display: flex;
@@ -292,9 +299,13 @@ body, h1 {
     align-items: center;
 }
 
+/* THIS IS UNUSED*/ 
+
 .pin-wrapper {
     margin-top: 50px;
 }
+
+/* THIS IS UNUSED*/ 
 
 .pin-display {
     display: flex;
@@ -306,10 +317,13 @@ body, h1 {
     font-size: 24px;
 }
 
+/* THIS IS UNUSED*/ 
+
 .pin-display span {
     margin: 0 10px;
 }
 
+/* THIS IS UNUSED*/ 
 .upload-btn {
     margin-top: 20px;
     padding: 10px;
@@ -321,9 +335,11 @@ body, h1 {
     cursor: pointer;
 }
 
+/* THIS IS UNUSED*/ 
 .upload-btn:hover {
     background-color: #0062cc;
 }
+
 
 .App {
     padding-left: 250px;
