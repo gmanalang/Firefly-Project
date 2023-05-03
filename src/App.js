@@ -26,6 +26,8 @@ function App() {
     await setRefresh(!refresh);
   }
 
+  // gets the important info to be able to
+  // refer to later on in the code
   async function getObjectInfo(object) {
     const storage = getStorage(object._service.app);
     const path = object._location.path_;
@@ -46,7 +48,9 @@ function App() {
    *
    * @returns {boolean} true if password is correct, false otherwise
    */
-  const uploadImageHandler = async () => {
+
+  // called when hitting "Send File" button
+  const uploadFileHandler = async () => {
     if (imageUpload == null) {
       return;
     }
@@ -58,14 +62,18 @@ function App() {
 
     setImageRef(currentImageRef);
 
+    // snapshot is an Object which can invoke .ref
+    // to get its key information about it
     const snapshot = await uploadBytes(currentImageRef, imageUpload);
 
     // Get the file information for the uploaded image
     const uploadedFileInfo = await getObjectInfo(snapshot.ref);
 
     // Update the files state with the uploaded file information
+    // (allows for multiple files to be uploaded)
     setFiles((prev) => [...prev, uploadedFileInfo]);
 
+    // refreshes the front-end to show the file
     await refreshFiles();
   };
 
@@ -73,7 +81,9 @@ function App() {
    *
    * @param {*} url
    */
-  const downloadImageHandler = (url, name) => {
+
+  // to be able to download the file on the front-end
+  const downloadFileHandler = (url, name) => {
     const xhr = new XMLHttpRequest();
     xhr.responseType = "blob";
     xhr.onload = (event) => {
@@ -81,7 +91,7 @@ function App() {
       const a = document.createElement("a");
       const urlObject = window.URL.createObjectURL(blob);
       a.href = urlObject;
-      a.download = name; // the file name
+      a.download = name; // the file name - only thing changed from given Firebase code
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
@@ -92,11 +102,8 @@ function App() {
     xhr.send();
   };
 
-  /**
-   *  Gets the list of images from the database and sets the imageList state
-   *
-   */
-  const deleteImageHandler = async () => {
+  // delete all files
+  const deleteAllFilesHandler = async () => {
     try {
       const response = await listAll(imageListRef);
       const deletePromises = response.items.map((item) => deleteObject(item));
@@ -105,10 +112,14 @@ function App() {
       console.error("Error deleting images:", error);
     }
 
+    // empty array again
     setFiles([]);
+
+    // front-end should reflect this empty array
     await refreshFiles();
   };
 
+  // delete a single file
   const deleteSingleHandler = async (url) => {
     try {
       const response = await listAll(imageListRef);
@@ -117,12 +128,18 @@ function App() {
         if (itemUrl === url) {
           try {
             await deleteObject(item);
+
+            // as long as a file's url is not the itemUrl
+            // (corresponding to the file that has to be
+            // deleted), keep it in the array
             setImageList((prev) => [...prev.filter((i) => i !== itemUrl)]);
           } catch (error) {}
         }
       });
 
       // Wait for all itemPromises to complete before resolving
+      // (if you don't have this, the file will appear on the
+      // front-end despite it being deleted by the button)
       await Promise.all(itemPromises);
     } catch (error) {}
   };
@@ -146,23 +163,39 @@ function App() {
     let out = false;
 
     let responses = await listAll(sessionListRef)
+    // makes sure response (an object from Firebase) is valid
       .then((response) => response)
       .catch((error) => {
         return false;
       });
 
+      // lists out all of the folder names (numbers),
+      // and for each folder name, if it equals the
+      // typed password, then out is mutated to true
     responses.prefixes.forEach((prefix) => {
       if (prefix._location.path.split("/")[1] === password) {
         out = true;
       }
     });
+    
+    // remains false if no such folder exists
+    // (password is typed out wrong), and so
+    // the website gives one an alert saying
+    // this is an incorrect pin
     return out;
   };
 
   const generateSessionHandler = async () => {
     let randSession = Math.floor(Math.random() * 90000 + 10000);
+
+    // using checkPasswordRepo not just for when
+    // a password is manually typed, but also when
+    // one is randomly generated
     let check = await checkPasswordRepo(randSession);
 
+    // verifies that it's a new password each time
+    // (while loop only runs if the randomly generated
+    // password actually exists already)
     while (check) {
       randSession = Math.floor(Math.random() * 90000 + 10000);
       check = await checkPasswordRepo(randSession);
@@ -171,10 +204,6 @@ function App() {
     setCurrentSession(randSession);
   };
 
-  const fetchUrls = async (item) => {
-    const url = await getDownloadURL(item);
-    setImageUrls((prev) => [...prev, url]);
-  };
 
   ////////////////////////////
   // APP SWITCHER
@@ -182,6 +211,7 @@ function App() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   // Use the useEffect hook to apply the CSS classes based on the condition
+  // (go from landing page to upload/download page)
   useEffect(() => {
     if (activeIndex === 0) {
       document.body.className = "panel-landing";
@@ -195,6 +225,9 @@ function App() {
     };
   }, [activeIndex]);
 
+  // giving Landing page and Upload/Download page
+  // access to certain handlers it does not know
+  // information about
   return (
     <>
       <Panel isActive={activeIndex === 0}>
@@ -214,14 +247,13 @@ function App() {
             onAction={() => setActiveIndex(0)}
             currentSession={currentSession}
             setImageHolder={setImageHolder}
-            uploadImageHandler={uploadImageHandler}
-            deleteImageHandler={deleteImageHandler}
+            uploadImageHandler={uploadFileHandler}
+            deleteImageHandler={deleteAllFilesHandler}
             setImageList={setImageList}
             setImageUrls={setImageUrls}
             imageListRef={imageListRef}
-            fetchUrls={fetchUrls}
             imageList={imageList}
-            downloadImageHandler={downloadImageHandler}
+            downloadImageHandler={downloadFileHandler}
             deleteSingleHandler={deleteSingleHandler}
             refresh={refresh}
             refreshFiles={refreshFiles}
@@ -264,6 +296,8 @@ export function Landing({
     generateSessionHandler();
   }
 
+  // handles the landing page (when
+  // hitting "submit" button)
   async function handleSubmitCode() {
     if (await passwordHandler(AuthPin)) {
       await refreshFiles();
@@ -321,7 +355,6 @@ export function UploadDownload({
   setImageList,
   setImageUrls,
   imageListRef,
-  fetchUrls,
   imageList,
   downloadImageHandler,
   deleteSingleHandler,
@@ -341,7 +374,6 @@ export function UploadDownload({
         setImageList={setImageList}
         setImageUrls={setImageUrls}
         imageListRef={imageListRef}
-        fetchUrls={fetchUrls}
         currentSession={currentSession}
         imageList={imageList}
         deleteSingleHandler={deleteSingleHandler}
@@ -426,11 +458,16 @@ export function Table({
     downloadImageHandler(url, name);
   };
 
+  // need to be async so that deleteFile
+  // is only called upon clicking the 
+  // corresponding button
   const deleteFile = async (url) => {
     await deleteSingleHandler(url);
     refreshFiles();
   };
 
+  // fetch files from Firebase (also needs
+  // to be async or else it won't load properly)
   const fetchFiles = async () => {
     try {
       const response = await listAll(imageListRef);
@@ -446,6 +483,10 @@ export function Table({
     }
   };
 
+  // whenever refreshing Firebase, we update
+  // the new files (delete everything then bring
+  // it back with the inclusion of the added
+  // uploaded file)
   useEffect(() => {
     setFiles([]);
     fetchFiles();
@@ -529,6 +570,8 @@ export function Timer({ deleteImageHandler, onAction }) {
       );
     } else {
       // When the timer reaches zero, call the deleteImageHandler
+      // (onAction will switch back to the landing page since
+      // the current ActionIndex is 0)
       deleteImageHandler();
       onAction();
       alert("Time's up!");
